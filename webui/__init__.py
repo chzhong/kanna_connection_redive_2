@@ -3,7 +3,7 @@ from hoshino import Service
 from nonebot import NoticeSession, on_command, logger
 from ..database.dal import pcr_sqla
 from ..database.models import WebAccount
-from ..setting import WebSetting
+from ..setting import resolve_web_public_url
 from .api import *
 from .util import create_login_ticket, hash_password
 
@@ -26,7 +26,7 @@ async def apply_login(session: NoticeSession):
         )
     ticket = create_login_ticket(qq_id)
     await session.send(
-        f"{WebSetting.web_public_url.value.rstrip('/')}/login?ticket={ticket}",
+        f"{resolve_web_public_url()}/login?ticket={ticket}",
         ensure_private=True,
     )
 

@@ -198,6 +198,33 @@ BOSS：1-5，对应公会战的一至五王，可以‘123’或者‘12’,也�
 
    `web_public_url` 必须与实际网页地址一致，机器人生成的登录链接会使用它。上例启用了 HTTPS，因此 `cookie_secure` 为 `True`；若仅在 HTTP 环境测试，则设为 `False`。修改配置后重启机器人。不要将内部 API 端口 `12139` 直接暴露到公网。
 
+   也可以使用请求变量自动生成公开地址：
+
+   ```python
+   class WebSetting(Enum):
+       api_host = "127.0.0.1"
+       api_port = "12139"
+       cookie_secure = False
+       trusted_hosts = (
+           "pcr.komeiji.fun",
+           "127.0.0.1",
+           "192.168.1.6",
+           "localhost",
+           "albert-nas",
+           "albert-nas.tail99cbf2.ts.net",
+       )
+       web_public_url = "{request_proto}://{host}/kanna_connection"
+   ```
+
+   `{request_proto}` 优先读取反向代理的 `X-Forwarded-Proto`，仅接受 `http` 或 `https`；未经过反代时使用实际请求协议。`{host}` 读取请求的 `Host`（端口会被忽略），并要求在 `trusted_hosts` 中，未命中时回退到 `trusted_hosts` 的第一个条目。反向代理必须透传 `Host` 和 `X-Forwarded-Proto`，例如当前配置中的 Nginx 已设置：
+
+   ```nginx
+   proxy_set_header Host $host;
+   proxy_set_header X-Forwarded-Proto $scheme;
+   ```
+
+   动态公开地址可通过反代后的 `GET /kanna_connection/api/web-public-url` 获取；机器人私聊在没有 HTTP 请求上下文时会使用首个可信 Host 作为兜底。不要把未验证的任意域名加入 `trusted_hosts`。
+
 ### 登录与使用
 
 - 向机器人**私聊**发送 `网页端登录`，打开返回的单次登录链接。链接有效期为 5 分钟，使用一次后即失效；过期时重新获取即可。

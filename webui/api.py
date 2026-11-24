@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Tuple
 
 import httpx
 import uvicorn
-from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Query, Response, status
+from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Query, Request, Response, status
 from fastapi.responses import FileResponse
 from hoshino.modules.priconne.chara import fromid
 from hoshino.modules.priconne._pcr_data import CHARA_NAME
@@ -45,7 +45,11 @@ from ..support_query.util import (
     save_player_units,
     save_support_units,
 )
-from ..setting import WebSetting
+from ..setting import (
+    get_request_scheme,
+    get_web_setting,
+    resolve_web_public_url,
+)
 from .util import *
 from .web_model import *
 from nonebot import logger, on_startup
@@ -668,8 +672,13 @@ async def validate_pcr_account(
     return account, refresh_account
 
 
+@api_app.get("/web-public-url")
+async def get_web_public_url(request: Request):
+    return {"web_public_url": resolve_web_public_url(request)}
+
+
 @api_app.post("/login")
-async def check_user(user: User, response: Response):
+async def check_user(user: User, response: Response, request: Request):
     ticket_login = False
     if user.ticket:
         account = consume_login_ticket(user.ticket)
@@ -706,7 +715,7 @@ async def check_user(user: User, response: Response):
             max_age=cookie_age,
             expires=cookie_age,
             path="/",
-            secure=WebSetting.cookie_secure.value,
+            secure=get_web_setting("cookie_secure") or get_request_scheme(request) == "https",
             httponly=True,
             samesite="lax",
         )
@@ -2422,8 +2431,8 @@ async def kanna_web():
         target=uvicorn.run,
         kwargs={
             "app": app,
-            "host": WebSetting.api_host.value,
-            "port": int(WebSetting.api_port.value),
+            "host": get_web_setting("api_host"),
+            "port": int(get_web_setting("api_port")),
         },
         daemon=True,
     )
