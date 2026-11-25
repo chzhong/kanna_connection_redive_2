@@ -283,7 +283,12 @@ class ClanBattle:
             await pcr_sqla.save_battle_entries(self.group_id, self.entries.dump())
             for order, boss in enumerate(self.boss, 1):
                 boss.fighter_num = len(self.entries.bosses.get(str(order), {}).get('entries', []))
-        for history in self.damage_correction.update(clan_battle_top):
+        histories = self.damage_correction.update(clan_battle_top)
+        # Entry state only tracks in-progress attempts. Sync completed reports
+        # separately before notices reuse their timings for carryover estimates.
+        self.report_timings.clear()
+        await self.add_record(self.loop_num)
+        for history in histories:
             damage = self.damage_correction.history_damage(history)
             if history.kill:
                 message = f"{history.name}对{history.lap_num}周目{history.order_num}王造成{damage}伤害并击破"
