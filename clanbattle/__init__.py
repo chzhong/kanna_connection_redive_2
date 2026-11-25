@@ -383,7 +383,7 @@ async def clear_apply(bot: HoshinoBot, ev: CQEvent, qq_id: int):
     await bot.send(ev, "清空成功", at_sender=True)
 
 
-@sv.on_fullmatch("今日出刀", "昨日出刀")
+@sv.on_fullmatch(("今日出刀", "昨日出刀"))
 async def dao_state(bot: HoshinoBot, ev: CQEvent):
     group_id = ev.group_id
     members = {}
@@ -419,7 +419,7 @@ async def get_report(bot: HoshinoBot, ev: CQEvent):
     await bot.send(ev, await get_cbreport(players, all_damage, all_score))
 
 
-@sv.on_prefix("今日战报", "昨日战报", "我的战报")
+@sv.on_prefix(("今日战报", "昨日战报", "我的战报"))
 async def player_report(bot: HoshinoBot, ev: CQEvent):
     name: str = ev.message.extract_plain_text().strip()
     if (preid := ev.prefix[:2]) == "今日":
@@ -489,7 +489,7 @@ async def nei_gui(bot: HoshinoBot, ev: CQEvent):
     await bot.send(ev, cuidao(await day_report(data, members)))
 
 
-@sv.on_fullmatch("会战KPI", "会战kpi")
+@sv.on_fullmatch(("会战KPI", "会战kpi"))
 async def get_kpi(bot: HoshinoBot, ev: CQEvent):
     if not (data := await pcr_sqla.get_all_records(ev.group_id)):
         await bot.send(ev, "数据库为空，请确保开启出刀监控")
@@ -511,13 +511,13 @@ async def correct_kpi(bot: HoshinoBot, ev: CQEvent, qq_id: int):
         await bot.send(ev, "设置失败，一定是你输入了奇怪的东西，爬爬")
 
 
-@sv.on_fullmatch("清空kpi", "清空KPI")
+@sv.on_fullmatch(("清空kpi", "清空KPI"))
 async def clean_kpi(bot: HoshinoBot, ev: CQEvent):
     await pcr_sqla.delete_kpi(ev.group_id)
     await bot.send(ev, "清空成功")
 
 
-@sv.on_prefix("删除kpi", "删除KPI")
+@sv.on_prefix(("删除kpi", "删除KPI"))
 async def del_kpi(bot: HoshinoBot, ev: CQEvent):
     await pcr_sqla.delete_kpi(ev.group_id, int(ev.message.extract_plain_text().strip()))
     await bot.send(ev, "删除成功")

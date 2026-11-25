@@ -50,7 +50,7 @@ async def jjc_help(bot: HoshinoBot, ev: CQEvent):
     await bot.send(ev, help_text)
 
 
-@sv.on_prefix("竞技场监控", "#竞技场监控")
+@sv.on_prefix(("竞技场监控", "#竞技场监控"))
 @check_account_qqid
 async def jjc_monitor(bot: HoshinoBot, ev: CQEvent, account: Account, qq_id: int):
     is_group = "#" in ev.raw_message
@@ -116,7 +116,7 @@ async def jjc_set(bot: HoshinoBot, ev: CQEvent):
     await bot.send(ev, "设置成功")
 
 
-@sv.on_prefix("竞技场查ID", "公主竞技场查ID")
+@sv.on_prefix(("竞技场查ID", "公主竞技场查ID"))
 async def query_jjc_id(bot: HoshinoBot, ev: CQEvent):
     num: str = ev.message.extract_plain_text().strip()
     if not num.isdigit():
@@ -136,7 +136,7 @@ async def query_jjc_id(bot: HoshinoBot, ev: CQEvent):
     await bot.send(ev, await arena.jjc_query_id(num, is_grand))
 
 
-@sv.on_fullmatch("取消竞技场监控", "#取消竞技场监控")
+@sv.on_fullmatch(("取消竞技场监控", "#取消竞技场监控"))
 async def delete_jjc(bot: HoshinoBot, ev: CQEvent):
     is_group = "#" in ev.raw_message
     if not (
@@ -151,7 +151,7 @@ async def delete_jjc(bot: HoshinoBot, ev: CQEvent):
         await bot.send(ev, "你不是监控人或者管理")
 
 
-@sv.on_prefix("#竞技场排行榜", "#公主竞技场排行榜")
+@sv.on_prefix(("#竞技场排行榜", "#公主竞技场排行榜"))
 async def jjc_rank_page(bot: HoshinoBot, ev: CQEvent):
     num: str = ev.message.extract_plain_text().strip()
     is_grand = "公主" in ev.raw_message
@@ -174,7 +174,7 @@ async def jjc_rank_page(bot: HoshinoBot, ev: CQEvent):
     )
 
 
-@sv.on_prefix("竞技场排行榜", "公主竞技场排行榜")
+@sv.on_prefix(("竞技场排行榜", "公主竞技场排行榜"))
 async def jjc_rank_page_simple(bot: HoshinoBot, ev: CQEvent):
     num: str = ev.message.extract_plain_text().strip()
     is_grand = "公主" in ev.raw_message
@@ -194,7 +194,7 @@ async def jjc_rank_page_simple(bot: HoshinoBot, ev: CQEvent):
     await bot.send(ev, "\n".join(msg))
 
 
-@sv.on_prefix("竞技场清次数", "公主竞技场清次数")
+@sv.on_prefix(("竞技场清次数", "公主竞技场清次数"))
 async def jjc_route(bot: HoshinoBot, ev: CQEvent):
     num: str = ev.message.extract_plain_text().strip()
     is_grand = "公主" in ev.raw_message
@@ -220,7 +220,7 @@ async def jjc_route(bot: HoshinoBot, ev: CQEvent):
     await bot.send(ev, MessageSegment.image(pic2b64(await general_img(msg))))
 
 
-@sv.on_prefix("竞技场查防守", "公主竞技场查防守")
+@sv.on_prefix(("竞技场查防守", "公主竞技场查防守"))
 async def query_jjc(bot: HoshinoBot, ev: CQEvent):
     num: str = ev.message.extract_plain_text().strip()
     is_grand = "公主" in ev.raw_message

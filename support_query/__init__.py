@@ -46,7 +46,7 @@ async def query_help(bot: HoshinoBot, ev: CQEvent):
     await bot.send(ev, img)
 
 
-@sv.on_prefix("精准助战", "精确助战")
+@sv.on_prefix(("精准助战", "精确助战"))
 async def query_clanbattle_support(bot: HoshinoBot, ev: CQEvent):
     name = ev.message.extract_plain_text().strip()
     ids, msg = name2id(name)
