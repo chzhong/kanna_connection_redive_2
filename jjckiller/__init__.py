@@ -2,25 +2,26 @@ import re
 import time
 
 import nonebot
+from nonebot import MessageSegment
+
 from hoshino import Service, priv
 from hoshino.typing import CQEvent, HoshinoBot
 from hoshino.util import pic2b64
-from nonebot import MessageSegment
 
-from ..database.dal import pcr_sqla, Account
+from ..database.dal import Account, pcr_sqla
 from ..login import query, run_group
-from .base import best_route
-from .get_img import general_img
-from .model import ArenaPool, PrioritizedQueryItem, ArenaItem, arena_manager
 from ..setting import ClientSetting
 from ..util.decorator import check_account_qqid
+from .base import best_route
+from .get_img import general_img
+from .model import ArenaItem, ArenaPool, PrioritizedQueryItem, arena_manager
 
 arena_pool = ArenaPool(ClientSetting.jjc_max.value, 30, 20)
 
 sv = Service(
     name="竞技场杀手",  # 功能名
-    visible=True,  # 可见性
-    enable_on_default=True,  # 默认启用
+    visible=False,  # 可见性
+    enable_on_default=False,  # 默认启用
     help_="",  # 帮助说明
 )
 

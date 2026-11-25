@@ -1,27 +1,21 @@
 import json
-from pathlib import Path
 import re
-from ..database.models import Account
-from .create_img import generate_box_img, generate_self_support_img
-from .util import (
-    get_clan_members_info,
-    get_support_list,
-    read_knight_exp_rank,
-    save_support_units,
-    save_player_units,
-    search_target,
-    export_library,
-    str2mode,
-    change_support_unit,
-)
-from ..util.tools import get_qid, name2id, load_config
-from ..util.decorator import check_account_qqid
-from ..database.dal import pcr_sqla
-from ..basedata import TALENT, FilePath
-from ..util.text2img import image_draw
+from pathlib import Path
+
 from hoshino import Service
+from hoshino.typing import CQEvent, HoshinoBot, MessageSegment
 from hoshino.util import pic2b64
-from hoshino.typing import MessageSegment, CQEvent, HoshinoBot
+
+from ..basedata import TALENT, FilePath
+from ..database.dal import pcr_sqla
+from ..database.models import Account
+from ..util.decorator import check_account_qqid
+from ..util.text2img import image_draw
+from ..util.tools import get_qid, load_config, name2id
+from .create_img import generate_box_img, generate_self_support_img
+from .util import (change_support_unit, export_library, get_clan_members_info,
+                   get_support_list, read_knight_exp_rank, save_player_units,
+                   save_support_units, search_target, str2mode)
 
 help_text = """
 【刷新box缓存】会顶号，请注意，机器人自动上号记录你的box
@@ -40,8 +34,8 @@ rank为小数点，小数点后仅只支持03456。可以叠加中间空格隔�
 
 sv = Service(
     name="精准助战",  # 功能名
-    visible=True,  # 可见性
-    enable_on_default=True,  # 默认启用
+    visible=False,  # 可见性
+    enable_on_default=False,  # 默认启用
     help_=help_text,  # 帮助说明
 )
 

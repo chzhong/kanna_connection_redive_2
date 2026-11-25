@@ -1,22 +1,19 @@
+import os
 import re
 
-import os
 from nonebot import MessageSegment
-from .create_img import team2pic
-from ..util.text2img import image_draw
-from ..util.tools import load_config
-from ..basedata import stage_dict
-from .timeaxis import (
-    MAX_QUERY,
-    type2chinese,
-    clanbattle_work,
-    MAX_SINGLE_BOSS
-)
-from hoshino.typing import CQEvent, HoshinoBot
+
 from hoshino import Service
-from hoshino.util import pic2b64
 from hoshino.modules.priconne import chara
 from hoshino.modules.priconne._pcr_data import CHARA_NAME
+from hoshino.typing import CQEvent, HoshinoBot
+from hoshino.util import pic2b64
+
+from ..basedata import stage_dict
+from ..util.text2img import image_draw
+from ..util.tools import load_config
+from .create_img import team2pic
+from .timeaxis import MAX_QUERY, MAX_SINGLE_BOSS, clanbattle_work, type2chinese
 
 helpText1 = """
 查轴指令帮助：
@@ -88,7 +85,7 @@ BOSS：1-5，对应公会战的一至五王，可以‘123’或者‘12’,也�
 数据来源于: https://www.caimogu.cc/gzlj.html
 """.strip()
 
-sv = Service("分刀", enable_on_default=True, help_=f"{helpText1}\n\n{helpText2}")
+sv = Service("分刀2", enable_on_default=True, help_=f"{helpText1}\n\n{helpText2}")
 
 
 @sv.on_fullmatch("查轴帮助")

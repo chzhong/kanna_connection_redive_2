@@ -1,25 +1,22 @@
 import contextlib
+import traceback
 from re import finditer
 from typing import Dict, Tuple
+
 import httpx
-import traceback
+from nonebot import (NoticeSession, get_bot, logger, on_command, on_notice,
+                     on_startup)
+
 from hoshino import Service
-from hoshino.typing import HoshinoBot, CQEvent
-from .client import (
-    check_client,
-    decryptxml,
-    decrypt_access_key,
-    pcrclient,
-    tw_pcrclient,
-    BaseClient,
-    get_access_key,
-)
-from .database.models import Account, RefreshAccount
-from .basedata import Platform, FilePath
-from nonebot import NoticeSession, get_bot, on_command, on_notice, logger, on_startup
+from hoshino.typing import CQEvent, HoshinoBot
+
+from .basedata import FilePath, Platform
+from .client import (BaseClient, check_client, decrypt_access_key, decryptxml,
+                     get_access_key, pcrclient, tw_pcrclient)
 from .database.dal import pcr_sqla
-from .util.tools import load_config, write_config
+from .database.models import Account, RefreshAccount
 from .errorclass import NeedRefreshError, UnknowError
+from .util.tools import load_config, write_config
 
 sv_help = """
 （加好友私聊）
@@ -30,7 +27,7 @@ login_id和token群里有提取器
 short_udid、udid和viewer_id也有提取器
 """
 
-sv = Service("你只需要好好出刀", help_=sv_help, visible=True)
+sv = Service("你只需要好好出刀2", help_=sv_help, visible=True)
 
 run_group: Dict[int, int] = {}
 client_cache: Dict[Tuple[int, int], BaseClient] = {}

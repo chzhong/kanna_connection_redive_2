@@ -1,11 +1,11 @@
-from ..util.decorator import check_account_qqid
-from ..util.tools import get_qid
+from hoshino import Service, priv
+from hoshino.typing import CQEvent, HoshinoBot
+
+from ..basedata import AllowLevel
 from ..database.dal import pcr_sqla
 from ..database.models import Account, ClanBattleMember
-from ..basedata import AllowLevel
-from hoshino import Service, priv
-from hoshino.typing import CQEvent
-from hoshino.typing import HoshinoBot
+from ..util.decorator import check_account_qqid
+from ..util.tools import get_qid
 
 help_text = """
 【绑定本群公会】将自己绑定在这个群
@@ -17,7 +17,7 @@ help_text = """
 sv = Service(
     name="成员管理",  # 功能名
     visible=False,  # 可见性
-    enable_on_default=True,  # 默认启用
+    enable_on_default=False,  # 默认启用
     help_=help_text,  # 帮助说明
 )
 
