@@ -33,7 +33,7 @@ rank为小数点，小数点后仅只支持03456。可以叠加中间空格隔�
 """.strip()
 
 sv = Service(
-    name="精准助战",  # 功能名
+    name="精准助战2",  # 功能名
     visible=False,  # 可见性
     enable_on_default=False,  # 默认启用
     help_=help_text,  # 帮助说明

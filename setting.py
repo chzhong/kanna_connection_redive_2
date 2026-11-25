@@ -1,5 +1,7 @@
 from enum import Enum
 from pathlib import Path
+from urllib.parse import urlsplit
+
 from .basedata import FilePath
 
 
@@ -66,20 +68,35 @@ def get_web_setting(name):
     if WebSettingLocal is not None:
         local_value = getattr(WebSettingLocal, name, None)
         if local_value is not None:
-            return local_value
+            return local_value.value if isinstance(local_value, Enum) else local_value
     return getattr(WebSetting, name).value
 
 
-def _normalize_host(host):
-    value = str(host or "").strip().lower()
-    if "://" in value:
-        value = value.split("://", 1)[1]
-    value = value.split("/", 1)[0]
-    if value.startswith("[") and "]" in value:
-        return value[1:value.index("]")]
-    if value.count(":") == 1:
-        value = value.rsplit(":", 1)[0]
-    return value.rstrip(".")
+def _parse_origin(value):
+    value = str(value or "").strip()
+    if "://" not in value:
+        if value.count(":") > 1 and not value.startswith("["):
+            value = f"[{value}]"  # 裸 IPv6 地址
+        value = f"//{value}"
+    try:
+        url = urlsplit(value)
+        if not url.hostname or url.username is not None:
+            return None
+        port = url.port
+    except ValueError:
+        return None
+    host = url.hostname.rstrip(".")
+    if not host or any(char.isspace() for char in host):
+        return None
+    authority = f"[{host}]" if ":" in host else host
+    if port is not None:
+        authority = f"{authority}:{port}"
+    return host, authority, url.scheme
+
+
+def _trusted_origins():
+    return [origin for value in get_web_setting("trusted_hosts")
+            if (origin := _parse_origin(value))]
 
 
 def get_request_scheme(request=None):
@@ -91,21 +108,21 @@ def get_request_scheme(request=None):
                 return proto
         if request.url.scheme in ("http", "https"):
             return request.url.scheme
+    else:
+        origins = _trusted_origins()
+        if origins and origins[0][2] in ("http", "https"):
+            return origins[0][2]
     return "https" if get_web_setting("cookie_secure") else "http"
 
 
 def get_request_host(request=None):
-    trusted_hosts = tuple(get_web_setting("trusted_hosts"))
-    fallback = _normalize_host(trusted_hosts[0]) if trusted_hosts else "127.0.0.1"
-    if request is None:
-        return fallback
-
-    host = _normalize_host(request.headers.get("host"))
-    trusted = {
-        _normalize_host(trusted_host)
-        for trusted_host in get_web_setting("trusted_hosts")
-    }
-    return host if host in trusted else fallback
+    origins = _trusted_origins()
+    if request is not None and (incoming := _parse_origin(request.headers.get("host"))):
+        # 使用配置中的端口，避免把请求方提供的任意端口写进公开链接。
+        for host, authority, _ in origins:
+            if host == incoming[0]:
+                return authority
+    return origins[0][1] if origins else "127.0.0.1"
 
 
 def resolve_web_public_url(request=None):

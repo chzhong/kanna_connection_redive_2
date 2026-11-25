@@ -26,7 +26,7 @@ async def apply_login(session: NoticeSession):
         )
     ticket = create_login_ticket(qq_id)
     await session.send(
-        f"{resolve_web_public_url()}/login?ticket={ticket}",
+        f"{resolve_web_public_url(request=None)}/login?ticket={ticket}",
         ensure_private=True,
     )
 

@@ -186,10 +186,10 @@ BOSS：1-5，对应公会战的一至五王，可以‘123’或者‘12’,也�
    构建结果在 `dist/`。也可以从 [前端 Releases](https://github.com/SonderXiaoming/kanna_connection_webui/releases) 下载打包文件并解压，其中包含 `dist/`。
 
 3. 将 `dist/` 放在 Web 服务器上，参考前端仓库的 [Nginx 配置示例](https://github.com/SonderXiaoming/kanna_connection_webui/blob/main/deploy/nginx.conf.example)，把网页部署在 `/kanna_connection/`，并将 `/kanna_connection/api/` 反向代理到 `127.0.0.1:12139`。按实际情况修改静态文件目录、域名、端口和 HTTPS 配置。网页与 API 应使用同一站点；刷新 `/kanna_connection/home` 等子页面时要回退到 `index.html`。
-4. 在本插件的 `setting.py` 中设置公开访问地址；例如：
+4. 在本插件目录创建 `settings_local.py` 设置公开访问地址，例如：
 
    ```python
-   class WebSetting(Enum):
+   class WebSettingLocal:
        api_host = "127.0.0.1"
        api_port = "12139"
        cookie_secure = True
@@ -201,29 +201,25 @@ BOSS：1-5，对应公会战的一至五王，可以‘123’或者‘12’,也�
    也可以使用请求变量自动生成公开地址：
 
    ```python
-   class WebSetting(Enum):
+   class WebSettingLocal:
        api_host = "127.0.0.1"
        api_port = "12139"
        cookie_secure = False
        trusted_hosts = (
-           "pcr.komeiji.fun",
-           "127.0.0.1",
-           "192.168.1.6",
-           "localhost",
-           "albert-nas",
-           "albert-nas.tail99cbf2.ts.net",
+           "https://nas.example.ts.net",
+           "192.168.1.6:8080",
        )
        web_public_url = "{request_proto}://{host}/kanna_connection"
    ```
 
-   `{request_proto}` 优先读取反向代理的 `X-Forwarded-Proto`，仅接受 `http` 或 `https`；未经过反代时使用实际请求协议。`{host}` 读取请求的 `Host`（端口会被忽略），并要求在 `trusted_hosts` 中，未命中时回退到 `trusted_hosts` 的第一个条目。反向代理必须透传 `Host` 和 `X-Forwarded-Proto`，例如当前配置中的 Nginx 已设置：
+   `{request_proto}` 优先读取反向代理的 `X-Forwarded-Proto`，仅接受 `http` 或 `https`；未经过反代时使用实际请求协议。`{host}` 按请求的 Host 匹配 `trusted_hosts`，使用配置中的主机名和可选端口。未命中时回退到首项。反向代理须传递 Host，并用实际协议覆盖 `X-Forwarded-Proto`，例如：
 
    ```nginx
    proxy_set_header Host $host;
    proxy_set_header X-Forwarded-Proto $scheme;
    ```
 
-   动态公开地址可通过反代后的 `GET /kanna_connection/api/web-public-url` 获取；机器人私聊在没有 HTTP 请求上下文时会使用首个可信 Host 作为兜底。不要把未验证的任意域名加入 `trusted_hosts`。
+   通过反代访问 `GET /kanna_connection/api/web-public-url` 可验证 LAN 和 Tailscale 的地址。QQ 私聊没有 HTTP 请求，动态模板使用 `trusted_hosts[0]` 生成一条登录链接。首项有显式协议时按首项，否则按 `cookie_secure` 选择 HTTPS 或 HTTP。使用固定 `web_public_url` 时仍返回固定地址。
 
 ### 登录与使用
 
