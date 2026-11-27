@@ -305,6 +305,13 @@ def pcr_day_label(timestamp: int) -> str:
     return value.strftime("%m-%d")
 
 
+def analytics_character(raw_unit_id: int) -> AnalyticsCharacterInfo:
+    unit_id = raw_unit_id // 100 if raw_unit_id >= 100000 else raw_unit_id
+    return AnalyticsCharacterInfo(
+        unit_id=unit_id, name=fromid(unit_id).name if unit_id in CHARA_NAME else ""
+    )
+
+
 async def build_clan_analytics(group_id: int) -> ClanAnalyticsResponse:
     records = await pcr_sqla.get_all_records(group_id)
     member_data = defaultdict(
@@ -394,13 +401,18 @@ async def build_clan_analytics(group_id: int) -> ClanAnalyticsResponse:
         for units, value in composition_data.items()
     ]
     compositions.sort(key=lambda item: (item.uses, item.damage), reverse=True)
+    top_compositions = compositions[:10]
+    for composition in top_compositions:
+        composition.characters = [
+            analytics_character(unit_id) for unit_id in composition.units
+        ]
     return ClanAnalyticsResponse(
         total_damage=total_damage,
         total_dao=total_dao,
         members=members,
         bosses=bosses,
         trends=trends,
-        compositions=compositions[:10],
+        compositions=top_compositions,
     )
 
 
@@ -1872,8 +1884,10 @@ async def clan_operations(
         can_operate=level >= ROLE_FOREMAN,
         monitor=MonitorStateInfo(
             running=bool(current and current.loop_check),
-            operator_id=getattr(current, "user_id", None) if current else None,
-            operator_name=str(getattr(current, "user_id", "")) if current else "",
+            operator_id=current.monitor_user_id if current else None,
+            operator_name=current.monitor_name if current else "",
+            platform=current.monitor_platform if current else None,
+            viewer_id=current.monitor_viewer_id if current else None,
             loop_num=int(current.loop_num if current else 0),
             last_check=int(current.loop_check if current else 0),
             error_count=int(current.error_count if current else 0),
@@ -1923,10 +1937,14 @@ async def start_clan_monitor(
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "机器人未连接该群")
     current = clanbattle_info.setdefault(group_id, ClanBattle(group_id))
     try:
-        await current.init(await query(account), account_owner, group["self_id"])
+        await current.init(
+            await query(account), account_owner, group["self_id"], account=account
+        )
     except Exception:
         try:
-            await current.init(await query(account, True), account_owner, group["self_id"])
+            await current.init(
+                await query(account, True), account_owner, group["self_id"], account=account
+            )
         except Exception as error:
             logger.error(traceback.format_exc())
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"监控启动失败：{error}")
@@ -2095,6 +2113,7 @@ async def dashboard_info(
         response.stage = f"{clan_info.period}面{clan_info.lap_num}周目"
         response.rank = clan_info.rank
         response.name = clan_info.user_id
+        response.monitor_name = clan_info.monitor_name
         if clan_info.loop_check:
             response.state = "开启" + (
                 "(高占用)" if now - clan_info.loop_check > 30 else ""
@@ -2157,6 +2176,7 @@ async def clan_report(
     user_id = int(token.user_id)
     response = ReportResponse()
     response.user_id = user_id
+    response.can_correct_all = member.priority >= ROLE_FOREMAN
     web_user = await pcr_sqla.web_query_user(user_id)
     response.priority = effective_web_priority(user_id, web_user)
     if info := await pcr_sqla.get_all_records(group_id):

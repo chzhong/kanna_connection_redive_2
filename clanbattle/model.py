@@ -3,7 +3,7 @@ import contextlib
 import time
 from collections import Counter
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from loguru import logger
 
@@ -19,7 +19,7 @@ from ..client.response import (
     ClanBattleTopResponse,
 )
 from ..database.dal import pcr_sqla
-from ..database.models import RecordDao
+from ..database.models import Account, RecordDao
 from ..errorclass import CancelledError
 from ..login import run_group
 from ..util.task_pool import PoolBase, PrioritizedQueryItemBase
@@ -62,8 +62,14 @@ class ClanBattle:
         self.entry_lock = asyncio.Lock()
         self.entries = EntryTracker('')
         self.report_timings = {}
+        self.monitor_user_id: Optional[int] = None
+        self.monitor_platform: Optional[int] = None
+        self.monitor_viewer_id: Optional[int] = None
+        self.monitor_name = ""
 
-    async def init(self, client: BaseClient, user_id: int, bot_id: int):
+    async def init(
+        self, client: BaseClient, user_id: int, bot_id: int, *, account: Optional[Account] = None
+    ):
         self.loop_num += 1
         self.client = client
         self.bot_id = bot_id
@@ -96,6 +102,14 @@ class ClanBattle:
         self.refresh_latest_time(clan_battle_top)
         self.damage_correction.reset(clan_battle_top)
         self.members: Dict[int, str] = await self.all_member()
+        viewer_id = str(getattr(client, "viewer_id", ""))
+        logged_in_id = int(viewer_id) if viewer_id.isdecimal() else None
+        self.monitor_user_id = account.user_id if account else user_id
+        self.monitor_platform = account.platform if account else None
+        self.monitor_viewer_id = logged_in_id or (account.viewer_id if account else None)
+        self.monitor_name = (
+            self.members.get(self.monitor_viewer_id or 0) or (account.name if account else None) or ""
+        )
         self.dao_update_time = int(time.time())
 
     async def get_coin(self) -> int:

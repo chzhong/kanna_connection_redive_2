@@ -243,6 +243,8 @@ class MonitorStateInfo(BaseModel):
     running: bool = False
     operator_id: Optional[int] = None
     operator_name: str = ""
+    platform: Optional[int] = None
+    viewer_id: Optional[int] = None
     loop_num: int = 0
     last_check: int = 0
     error_count: int = 0
@@ -302,8 +304,14 @@ class AnalyticsTrendInfo(BaseModel):
     damage: int = 0
 
 
+class AnalyticsCharacterInfo(BaseModel):
+    unit_id: int
+    name: str = ""
+
+
 class AnalyticsCompositionInfo(BaseModel):
     units: List[int] = Field(default_factory=list)
+    characters: List[AnalyticsCharacterInfo] = Field(default_factory=list)
     uses: int = 0
     damage: int = 0
 
@@ -362,6 +370,7 @@ class DashboardResponse(BaseModel):
     clan_priority: int = 0
     user_id: int = 1791800364
     name: str = "无"
+    monitor_name: str = ""
     clan_name: str = "环奈连结"
     stage: str = "暂无信息"
     dao: int = 0
@@ -397,6 +406,7 @@ class DaoInfo(BaseModel):
 
 class ReportResponse(BaseModel):
     priority: int = 0
+    can_correct_all: bool = False
     user_id: int = 1791800364
     name: str = ""
     all: List[DaoInfo] = []

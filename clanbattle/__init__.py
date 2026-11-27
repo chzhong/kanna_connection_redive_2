@@ -93,10 +93,10 @@ async def clanbattle_monitor(
         clanbattle_info[group_id] = ClanBattle(group_id)
     clan_info = clanbattle_info[group_id]
     try:
-        await clan_info.init(await query(account), qq_id, ev.self_id)
+        await clan_info.init(await query(account), qq_id, ev.self_id, account=account)
     except Exception:
         try:
-            await clan_info.init(await query(account, True), qq_id, ev.self_id)
+            await clan_info.init(await query(account, True), qq_id, ev.self_id, account=account)
         except Exception as e:
             await bot.send(
                 ev, "初始化多次失败，请重绑账号或者手动上号检查是否可登录后重试"
