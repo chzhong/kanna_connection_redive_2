@@ -13,6 +13,7 @@ from ..client import (
     LoadIndexResponse,
     check_client,
 )
+from ..client.common import DamageHistory
 from ..client.response import (
     BattleInfo,
     ClanBattleLogListResponse,
@@ -26,6 +27,7 @@ from ..util.task_pool import PoolBase, PrioritizedQueryItemBase
 from ..util.tools import anywhere_send
 from ..util.auto_boss import clan_boss_info
 from .base import find_item, format_bignum, format_precent
+from .boss_notice import boss_notice_lines
 from .damage_correction import DamageCorrectionTracker, history_key
 from .entry_tracker import EntryTracker
 
@@ -248,11 +250,6 @@ class ClanBattle:
                 "\n".join(self.notice_subscribe), self.group_id, self.bot_id
             )
             self.notice_subscribe.clear()
-        if NoticeType.fighter.value in types:
-            await anywhere_send(
-                "\n".join(self.notice_fighter), self.group_id, self.bot_id
-            )
-            self.notice_fighter.clear()
         if NoticeType.dao.value in types:
             await anywhere_send(
                 "\n".join(self.notice_dao[::-1]), self.group_id, self.bot_id
@@ -261,6 +258,11 @@ class ClanBattle:
         if NoticeType.tree.value in types:
             await anywhere_send("\n".join(self.notice_tree), self.group_id, self.bot_id)
             self.notice_tree.clear()
+        if NoticeType.fighter.value in types:
+            await anywhere_send(
+                "\n".join(self.notice_fighter), self.group_id, self.bot_id
+            )
+            self.notice_fighter.clear()
 
     async def refresh_boss(self, clan_battle_top: ClanBattleTopResponse) -> bool:
         change = False
@@ -290,7 +292,9 @@ class ClanBattle:
                 self.notice_fighter.append(self.entries.describe(i + 1, int(time.time())))
         return change
 
-    async def record_change(self, clan_battle_top: ClanBattleTopResponse):
+    async def record_change(
+        self, clan_battle_top: ClanBattleTopResponse
+    ) -> List[DamageHistory]:
         async with self.entry_lock:
             for history in sorted(clan_battle_top.damage_history or [], key=lambda h: h.create_time):
                 self.entries.settle(history)
@@ -302,6 +306,7 @@ class ClanBattle:
         # separately before notices reuse their timings for carryover estimates.
         self.report_timings.clear()
         await self.add_record(self.loop_num)
+        kills = []
         for history in histories:
             damage = self.damage_correction.history_damage(history)
             if history.kill:
@@ -323,6 +328,7 @@ class ClanBattle:
                 )
             # 通知挂树，清空申请出刀
             if history.kill:
+                kills.append(history)
                 if offtree_text := await self.notice_text(
                     history.order_num, 0, NoticeType.tree.value
                 ):
@@ -331,6 +337,26 @@ class ClanBattle:
 
         self.dao_update_time = int(time.time())
         self.refresh_latest_time(clan_battle_top)
+        return kills[::-1]
+
+    async def send_boss_notice(
+        self, previous_lap: int, previous_stage: str, kills: List[DamageHistory]
+    ):
+        if not kills and not (previous_lap and self.lap_num > previous_lap):
+            return
+        level = await pcr_sqla.get_boss_notice_level(self.group_id)
+        lines = boss_notice_lines(
+            level, previous_lap, previous_stage, self.lap_num, self.period,
+            [
+                (kill.lap_num, kill.order_num, clan_boss_info.lap2stage(kill.lap_num))
+                for kill in kills if kill.lap_num and kill.order_num
+            ],
+            bool(self.notice_subscribe or self.notice_tree),
+        )
+        if lines:
+            await anywhere_send(
+                "\n".join([*lines, self.general_boss()]), self.group_id, self.bot_id
+            )
 
     async def reconcile_damage(self):
         # A detailed report can become visible after top was fetched in the
@@ -411,31 +437,19 @@ class ClanBattlePool(PoolBase):
 
             # 初始化
             clan_battle_top = await clan_info.get_clanbattle_top()
-            clan_info.lap_num = clan_battle_top.lap_num
+            previous_lap, previous_stage = clan_info.lap_num, clan_info.period
+            if clan_battle_top.lap_num:  # 接口偶尔不返回周目
+                clan_info.lap_num = clan_battle_top.lap_num
+                clan_info.period = clan_boss_info.lap2stage(clan_info.lap_num)
             clan_info.rank = clan_battle_top.period_rank
 
-            # 换面提醒
-            if clan_battle_top.lap_num:  # 有时候网络不好这个就直接是none了
-                if clan_info.period < (
-                    temp := clan_boss_info.lap2stage(clan_battle_top.lap_num)
-                ):
-                    await anywhere_send(
-                        f"会战阶段从{clan_info.period}面到了{temp}面，请注意轴的切换喵",
-                        clan_info.group_id,
-                        clan_info.bot_id,
-                    )
-                    clan_info.period = temp
-
-                    # 刷新状态，提醒预约
             await clan_info.refresh_boss(clan_battle_top)
-            await clan_info.send_notice(
-                [NoticeType.subscribe.value, NoticeType.fighter.value]
-            )
-
             # Damage histories can change even when a snapshot's HP does not.
-            await clan_info.record_change(clan_battle_top)
+            kills = await clan_info.record_change(clan_battle_top)
+            await clan_info.send_notice([NoticeType.dao.value])
+            await clan_info.send_boss_notice(previous_lap, previous_stage, kills)
             await clan_info.send_notice(
-                [NoticeType.dao.value, NoticeType.tree.value]
+                [NoticeType.subscribe.value, NoticeType.tree.value, NoticeType.fighter.value]
             )
             await clan_info.reconcile_damage()
             clan_info.error_count = 0

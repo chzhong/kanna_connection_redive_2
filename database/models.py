@@ -246,6 +246,11 @@ class BattleEntryState(DataBase, table=True):
     state: str = Field(default='')
 
 
+class ClanBattleSettings(DataBase, table=True):
+    group_id: int = Field(primary_key=True)
+    boss_notice_level: int = Field(default=0)
+
+
 class CookieCache(DataBase, table=True):
     __table_args__ = {"keep_existing": True}
     token: str = Field(primary_key=True, title="token")

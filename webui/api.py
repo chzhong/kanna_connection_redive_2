@@ -27,6 +27,7 @@ from ..clanbattle import (
 from ..clanbattle.model import ClanBattle, ClanbattleItem, PrioritizedQueryItem
 from ..util.auto_boss import clan_boss_info
 from ..clanbattle.base import clanbattle_report, cuidao
+from ..clanbattle.boss_notice import BOSS_NOTICE_NAMES
 from ..database.dal import CookieCache, SLDao, pcr_sqla
 from ..database.models import (
     Account,
@@ -1882,6 +1883,7 @@ async def clan_operations(
         role=role_name(level),
         role_level=level,
         can_operate=level >= ROLE_FOREMAN,
+        boss_notice_level=await pcr_sqla.get_boss_notice_level(group_id),
         monitor=MonitorStateInfo(
             running=bool(current and current.loop_check),
             operator_id=current.monitor_user_id if current else None,
@@ -1908,6 +1910,18 @@ async def clan_operations(
         apply_count=len(await pcr_sqla.get_notice(NoticeType.apply.value, group_id)),
         tree_count=len(await pcr_sqla.get_notice(NoticeType.tree.value, group_id)),
     ).dict()
+
+
+@api_app.put("/groups/{group_id}/monitor/boss-notice")
+async def update_boss_notice(
+    group_id: int, form: BossNoticeForm, token: CookieCache = Depends(verify_cookie)
+):
+    await require_group_role(group_id, token, ROLE_FOREMAN)
+    await pcr_sqla.set_boss_notice_level(group_id, form.level)
+    return {
+        "boss_notice_level": form.level,
+        "message": f"本群首领通报已设为{form.level}级（{BOSS_NOTICE_NAMES[form.level]}）",
+    }
 
 
 @api_app.post("/groups/{group_id}/monitor/start")

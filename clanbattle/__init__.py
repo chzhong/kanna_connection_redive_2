@@ -25,6 +25,7 @@ from .base import (
     get_kpireport,
     clanbattle_report,
 )
+from .boss_notice import BOSS_NOTICE_NAMES, parse_boss_notice_level
 
 from .kpi import kpi_report
 from .model import ClanBattle, ClanbattleItem, ClanBattlePool, PrioritizedQueryItem
@@ -42,6 +43,8 @@ help_text = """
 【昨日出刀】昨日出刀情况
 【启用肃正协议】数据出现异常使用即可清空所有数据（危险！！！）
 【状态】查看当前进度
+【boss状态】查看各首领的血量和挑战状态
+【首领通报 + 等级或名称】设置本群首领状态通报（工头及以上）；不带参数可查询
 【预约表】栞栞谁预约了
 【预约 + 数字 + （周目）+ （留言） 】预约boss, 周目和留言可不写，默认当前周目
 【取消预约 + （数字）】取消预约
@@ -167,6 +170,42 @@ async def daostate(bot: HoshinoBot, ev: CQEvent):
                 msg += f"->{i+1}：{name} {info.text} 已过去{format_time(now - info.time)}\n"
     if msg:
         await bot.send(ev, msg.strip())
+
+
+@sv.on_fullmatch(("BOSS状态", "boss状态"))
+async def boss_status(bot: HoshinoBot, ev: CQEvent):
+    clan_info = clanbattle_info.get(ev.group_id)
+    await bot.send(
+        ev, clan_info.general_boss() if clan_info and clan_info.period else
+        "未查询到本群当前进度，请开启出刀监控"
+    )
+
+
+@sv.on_prefix("首领通报")
+async def boss_notice_setting(bot: HoshinoBot, ev: CQEvent):
+    if ev["message_type"] != "group":
+        return
+    group_id = ev.group_id
+    value = ev.message.extract_plain_text().strip()
+    options = " / ".join(f"{level} {name}" for level, name in enumerate(BOSS_NOTICE_NAMES))
+    if not value:
+        current = await pcr_sqla.get_boss_notice_level(group_id)
+        await bot.send(ev, f"本群首领通报：{current}级（{BOSS_NOTICE_NAMES[current]}）\n{options}")
+        return
+
+    qq_level = priv.get_user_priv(ev)
+    if qq_level < priv.ADMIN:
+        member = await pcr_sqla.get_clan_member(group_id, ev.user_id) if qq_level >= priv.NORMAL else None
+        if not member or (member.priority or 0) < priv.ADMIN:
+            await bot.send(ev, "仅工头及以上可以修改首领通报", at_sender=True)
+            return
+
+    level = parse_boss_notice_level(value)
+    if level is None:
+        await bot.send(ev, f"用法：首领通报 <等级或名称>\n{options}", at_sender=True)
+        return
+    await pcr_sqla.set_boss_notice_level(group_id, level)
+    await bot.send(ev, f"本群首领通报已设为{level}级（{BOSS_NOTICE_NAMES[level]}）", at_sender=True)
 
 
 @sv.on_rex(r"^预约\s?(\d)(\s\d+)?(\s\S*)?$")

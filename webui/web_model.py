@@ -1,6 +1,7 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, conint
 
+from ..clanbattle.boss_notice import BossNoticeLevel
 from ..database.models import NoticeCache
 
 
@@ -239,6 +240,10 @@ class MonitorStartForm(BaseModel):
     platform: int = 0
 
 
+class BossNoticeForm(BaseModel):
+    level: conint(strict=True, ge=BossNoticeLevel.MANUAL, le=BossNoticeLevel.KILL)
+
+
 class MonitorStateInfo(BaseModel):
     running: bool = False
     operator_id: Optional[int] = None
@@ -273,6 +278,7 @@ class ClanOperationsResponse(BaseModel):
     role: str = "员工"
     role_level: int = 1
     can_operate: bool = False
+    boss_notice_level: int = 0
     monitor: MonitorStateInfo = Field(default_factory=MonitorStateInfo)
     accounts: List[OperationAccountInfo] = Field(default_factory=list)
     kpis: List[KpiInfo] = Field(default_factory=list)

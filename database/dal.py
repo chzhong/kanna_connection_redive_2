@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Union
 
 from sqlalchemy import asc, delete, desc, insert, text, update
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.future import select
 from sqlalchemy.orm import sessionmaker
@@ -15,6 +16,7 @@ from .models import (
     ArenaSetting,
     ClanBattleKPI,
     ClanBattleMember,
+    ClanBattleSettings,
     CookieCache,
     DataBase,
     GrandDefenceCache,
@@ -206,6 +208,21 @@ class SQALA:
                 await session.merge(account)
 
     # 会战部分
+    async def get_boss_notice_level(self, group_id: int) -> int:
+        async with self.async_session() as session:
+            settings = await session.get(ClanBattleSettings, group_id)
+            return settings.boss_notice_level if settings else 0
+
+    async def set_boss_notice_level(self, group_id: int, level: int):
+        statement = sqlite_insert(ClanBattleSettings).values(
+            group_id=group_id, boss_notice_level=level
+        ).on_conflict_do_update(
+            index_elements=[ClanBattleSettings.group_id], set_={"boss_notice_level": level}
+        )
+        async with self.async_session() as session:
+            async with session.begin():
+                await session.execute(statement)
+
     async def add_record(self, dao_list: List[RecordDao]):
         async with self.async_session() as session:
             async with session.begin():
